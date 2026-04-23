@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#ffffff">
+<title>Enactus — Посещаемость</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.umd.min.js"></script>
+<style>
+:root {
+  --or: #FF6B00;
+  --or-lt: #FFF4EC;
+  --or-mid: #FFD5B0;
+  --green: #16a34a; --green-lt: #dcfce7;
+  --red: #dc2626;   --red-lt: #fee2e2;
+  --amber: #d97706; --amber-lt: #fef3c7;
+  --blue: #2563eb;  --blue-lt: #eff6ff;
+  --purple: #7c3aed;--purple-lt: #ede9fe;
+  --border: #e5e7eb;
+  --bg: #f4f5f7;
+  --card: #fff;
+  --text: #111827;
+  --muted: #6b7280;
+  --r: 14px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:15px;overscroll-behavior:none;}
+
+/* Shell */
+.shell{display:flex;flex-direction:column;height:100dvh;max-width:480px;margin:0 auto;background:var(--bg);}
+@media(min-width:500px){.shell{box-shadow:0 0 40px rgba(0,0,0,.13);body{background:#dde0e7;}}}
+
+/* Header */
+.hdr{background:var(--card);border-bottom:1px solid var(--border);padding:10px 14px;flex-shrink:0;display:flex;align-items:center;gap:10px;}
+.hdr-logo{display:flex;align-items:center;gap:9px;}
+.en-badge{background:var(--or);color:#fff;font-size:11px;font-weight:900;letter-spacing:.05em;padding:4px 9px;border-radius:7px;line-height:1;flex-shrink:0;}
+.hdr-info{}
+.hdr-team{font-size:14px;font-weight:800;color:#111;}
+.hdr-uni{font-size:11px;color:var(--muted);}
+
+/* Content */
+.content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 12px 74px;}
+
+/* Bottom nav */
+.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--card);border-top:1px solid var(--border);display:flex;z-index:30;padding-bottom:env(safe-area-inset-bottom,0);}
+.bn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px 6px;border:none;background:none;font-family:inherit;font-size:10px;font-weight:500;color:var(--muted);cursor:pointer;gap:3px;min-height:54px;}
+.bn .ic{font-size:21px;line-height:1;}
+.bn.on{color:var(--or);font-weight:800;}
+
+/* Page */
+.page{display:none;}.page.on{display:block;}
+
+/* Generic card */
+.card{background:var(--card);border-radius:var(--r);padding:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.07);}
+
+/* Section label */
+.slabel{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin:14px 0 6px 2px;}
+
+/* Stats grid */
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.sc{background:var(--card);border-radius:var(--r);padding:12px;box-shadow:0 1px 4px rgba(0,0,0,.07);display:flex;align-items:center;gap:10px;}
+.sc-ic{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.sc-num{font-size:24px;font-weight:800;line-height:1;}
+.sc-lbl{font-size:11px;color:var(--muted);margin-top:2px;}
+
+/* Week bar */
+.wkbar{background:var(--card);border-radius:var(--r);padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:8px;box-shadow:0 1px 4px rgba(0,0,0,.07);}
+.wkb{width:38px;height:38px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg);font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .12s;}
+.wkb:active{transform:scale(.9);background:var(--border);}
+.wkmid{flex:1;text-align:center;}
+.wkt{font-size:14px;font-weight:700;}
+.wks{font-size:11px;color:var(--muted);}
+.now-btn{background:var(--or);color:#fff;border:none;border-radius:20px;padding:7px 13px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;}
+.now-btn:active{opacity:.8;}
+
+/* Member attendance card */
+.mcard{background:var(--card);border-radius:var(--r);padding:12px 14px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.07);}
+.mcard-top{display:flex;align-items:center;gap:10px;}
+.ava{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0;}
+.mname{font-weight:700;font-size:14px;}
+.mrole{margin-top:2px;}
+.mhrs{font-size:12px;font-weight:700;color:var(--or);background:var(--or-lt);padding:3px 9px;border-radius:20px;white-space:nowrap;margin-left:auto;}
+
+/* Day chips */
+.chips-row{display:flex;gap:5px;margin-top:10px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;}
+.chips-row::-webkit-scrollbar{display:none;}
+.dc{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;user-select:none;flex-shrink:0;}
+.dname{font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;}
+.chip{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;border:1.5px solid var(--border);background:var(--bg);color:#bbb;transition:all .1s;}
+.chip:active{transform:scale(.84);}
+.chip.present{background:var(--green-lt);border-color:#86efac;color:var(--green);}
+.chip.absent{background:var(--red-lt);border-color:#fca5a5;color:var(--red);}
+.chip.today-r{box-shadow:0 0 0 2.5px var(--or);}
+.ddate{font-size:9px;color:var(--muted);}
+
+/* Legend */
+.legend{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+.leg{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);background:var(--card);padding:5px 10px;border-radius:20px;box-shadow:0 1px 2px rgba(0,0,0,.05);}
+.ldot{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
+
+/* Role badges */
+.rb{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;}
+.rb-pr{background:var(--or-lt);color:var(--or);}
+.rb-vp{background:var(--purple-lt);color:var(--purple);}
+.rb-mb{background:var(--blue-lt);color:var(--blue);}
+.rb-ad{background:var(--green-lt);color:var(--green);}
+
+/* Project chips */
+.pch{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+.pchip{padding:6px 12px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid var(--border);background:var(--bg);color:var(--muted);transition:all .12s;user-select:none;}
+.pchip.on{background:var(--purple-lt);border-color:var(--purple);color:var(--purple);}
+.pchip:active{transform:scale(.9);}
+
+/* Time bottom sheet */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:90;}
+.overlay.on{display:block;}
+.bsheet{display:none;position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--card);border-radius:20px 20px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom,0));z-index:100;box-shadow:0 -4px 28px rgba(0,0,0,.15);max-height:90dvh;overflow-y:auto;}
+.bsheet.on{display:block;}
+.bs-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px;}
+.bs-title{font-size:15px;font-weight:800;margin-bottom:14px;}
+.bs-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.bs-lbl{font-size:13px;color:var(--muted);font-weight:600;min-width:60px;}
+.bs-inp{flex:1;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:16px;color:var(--text);background:var(--bg);outline:none;}
+.bs-inp:focus{border-color:var(--or);}
+.btn-done{width:100%;padding:14px;background:var(--or);color:#fff;border:none;border-radius:12px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;}
+.btn-done:active{opacity:.85;}
+
+/* Meeting page */
+.mtg-card{background:var(--card);border-radius:var(--r);padding:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.07);border-left:3px solid var(--or);}
+.mtg-title{font-size:15px;font-weight:800;margin-bottom:4px;}
+.mtg-meta{font-size:12px;color:var(--muted);margin-bottom:10px;}
+.att-grid{display:flex;flex-wrap:wrap;gap:7px;}
+.att-chip{display:flex;align-items:center;gap:5px;padding:6px 11px;border-radius:20px;border:1.5px solid var(--border);background:var(--bg);cursor:pointer;transition:all .12s;user-select:none;}
+.att-chip.on{background:var(--or-lt);border-color:var(--or);}
+.att-chip:active{transform:scale(.9);}
+.att-chip-ava{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0;}
+.att-chip-name{font-size:12px;font-weight:600;}
+.att-chip.on .att-chip-name{color:var(--or);font-weight:700;}
+.att-check{font-size:11px;color:var(--or);}
+
+/* New meeting sheet */
+.mtg-sheet-area{width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:15px;color:var(--text);background:var(--bg);outline:none;resize:vertical;min-height:70px;margin-bottom:10px;}
+.mtg-sheet-area:focus{border-color:var(--or);}
+
+/* Inputs */
+input[type=text],input[type=number],input[type=date],select{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:15px;color:var(--text);background:var(--bg);outline:none;margin-bottom:8px;-webkit-appearance:none;}
+input:focus,select:focus{border-color:var(--or);background:#fff;}
+.btn-or{width:100%;padding:13px;background:var(--or);color:#fff;border:none;border-radius:12px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;}
+.btn-or:active{opacity:.85;}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+.btn{flex:1;min-width:120px;padding:12px 14px;border-radius:12px;border:none;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;}
+.btn:active{opacity:.8;transform:scale(.97);}
+.btn-main{background:var(--or);color:#fff;}
+.btn-lt{background:var(--card);color:var(--text);border:1.5px solid var(--border);}
+.btn-del{background:var(--red-lt);color:var(--red);}
+
+/* Person row */
+.prow{display:flex;align-items:center;gap:10px;background:var(--card);border-radius:var(--r);padding:12px 14px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.07);}
+.del{width:34px;height:34px;border:none;background:none;font-size:19px;color:#d1d5db;cursor:pointer;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.del:active{background:var(--red-lt);color:var(--red);}
+
+/* Individual page */
+.ind-hdr{background:var(--card);border-radius:var(--r);padding:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.07);display:flex;align-items:center;gap:12px;}
+.ind-ava{width:54px;height:54px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;flex-shrink:0;}
+.pct-n{font-size:26px;font-weight:800;color:var(--or);line-height:1;}
+.pct-bar{height:5px;background:var(--border);border-radius:3px;margin-top:5px;overflow:hidden;width:80px;}
+.pct-fill{height:100%;border-radius:3px;background:var(--or);}
+.wk-item{background:var(--card);border-radius:var(--r);padding:12px 14px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.07);display:flex;align-items:center;flex-wrap:wrap;gap:7px;}
+.wk-lbl{font-size:13px;font-weight:700;flex:1;min-width:80px;}
+
+/* Report */
+.rp-wk{background:var(--card);border-radius:var(--r);padding:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.07);}
+.rp-wk-t{font-size:13px;font-weight:800;color:var(--or);margin-bottom:8px;}
+.rp-mtg{font-size:12px;color:var(--muted);background:var(--or-lt);border-radius:8px;padding:6px 10px;margin-bottom:8px;}
+.rp-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f3f4f6;}
+.rp-row:last-child{border-bottom:none;}
+.rp-name{flex:1;font-size:13px;font-weight:700;}
+.badge{padding:3px 8px;border-radius:20px;font-size:11px;font-weight:700;}
+.bg{background:var(--green-lt);color:var(--green);}
+.br{background:var(--red-lt);color:var(--red);}
+.bo{background:var(--or-lt);color:var(--or);}
+.bb{background:var(--blue-lt);color:var(--blue);}
+
+/* Settings */
+.set-sec{background:var(--card);border-radius:var(--r);overflow:hidden;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.07);}
+.set-row{display:flex;align-items:center;padding:12px 14px;border-bottom:1px solid #f3f4f6;gap:10px;}
+.set-row:last-child{border-bottom:none;}
+.set-lbl{flex:1;font-size:14px;font-weight:600;}
+.set-si{width:130px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:14px;text-align:right;outline:none;background:var(--bg);margin:0;-webkit-appearance:none;}
+.set-si:focus{border-color:var(--or);}
+.wd-row{display:flex;gap:6px;flex-wrap:wrap;padding:10px 14px 14px;}
+.wdc{padding:7px 12px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid var(--border);background:var(--bg);color:var(--muted);transition:all .12s;user-select:none;}
+.wdc.on{background:var(--or-lt);border-color:var(--or);color:var(--or);}
+.wdc:active{transform:scale(.9);}
+
+/* Empty state */
+.empty{text-align:center;padding:36px 20px;color:var(--muted);}
+.ei{font-size:36px;margin-bottom:8px;}
+
+/* Toast */
+.toast{position:fixed;bottom:68px;left:50%;transform:translateX(-50%) translateY(8px);background:#111827;color:#fff;padding:10px 20px;border-radius:24px;font-size:14px;font-weight:600;white-space:nowrap;opacity:0;transition:all .22s;z-index:200;pointer-events:none;}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="hdr">
+    <div class="hdr-logo">
+      <div class="en-badge">ENACTUS</div>
+      <div class="hdr-info">
+        <div class="hdr-team" id="hTeam">Команда</div>
+        <div class="hdr-uni" id="hUni">Учёт посещаемости</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content" id="cnt">
+
+    <div class="page on" id="pg-journal">
+      <div class="wkbar">
+        <button class="wkb" onclick="cw(-1)">&#8249;</button>
+        <div class="wkmid">
+          <div class="wkt" id="wkT">—</div>
+          <div class="wks" id="wkS">—</div>
+        </div>
+        <button class="wkb" onclick="cw(1)">&#8250;</button>
+        <button class="now-btn" onclick="goNow()">Сегодня</button>
+      </div>
+      <div class="sg" id="statsG"></div>
+      <div id="mtgBanner"></div>
+      <div class="legend">
+        <div class="leg"><div class="ldot" style="background:var(--green)"></div>П — пришёл</div>
+        <div class="leg"><div class="ldot" style="background:var(--red)"></div>О — отсутствует</div>
+        <div class="leg" style="font-size:11px;color:#bbb">Нажмите на ячейку → смена статуса</div>
+      </div>
+      <div id="journalList"></div>
+    </div>
+
+    <div class="page" id="pg-meeting">
+      <button class="btn-or" style="margin-bottom:12px" onclick="openMtgSheet()">+ Новое собрание</button>
+      <div id="mtgList"></div>
+    </div>
+
+    <div class="page" id="pg-member">
+      <div class="card" style="padding:12px">
+        <select id="indSel" onchange="renderInd()">
+          <option value="">— выберите участника —</option>
+        </select>
+      </div>
+      <div id="indContent"></div>
+    </div>
+
+    <div class="page" id="pg-report">
+      <div class="btn-row">
+        <button class="btn btn-main" onclick="dlWord()">📄 Скачать Word</button>
+        <button class="btn btn-lt" onclick="renderReport()">↺ Обновить</button>
+      </div>
+      <div id="repContent"><div class="empty"><div class="ei">📊</div>Нажмите «Обновить»</div></div>
+    </div>
+
+    <div class="page" id="pg-more">
+
+      <div class="slabel">Команда</div>
+      <div class="set-sec">
+        <div class="set-row"><div class="set-lbl">Название команды</div><input type="text" id="sTeam" class="set-si" placeholder="Enactus KSTU"></div>
+        <div class="set-row"><div class="set-lbl">Университет</div><input type="text" id="sUni" class="set-si" placeholder="Университет"></div>
+        <div class="set-row"><div class="set-lbl">Часов по умолч.</div><input type="number" id="sHrs" value="2" min="1" max="12" class="set-si"></div>
+      </div>
+
+      <div class="slabel">Рабочие дни</div>
+      <div class="set-sec"><div class="wd-row" id="wdC"></div></div>
+
+      <button class="btn-or" style="margin-bottom:14px" onclick="saveSet()">Сохранить настройки</button>
+
+      <div class="slabel">Проекты</div>
+      <div class="card">
+        <div id="projList"></div>
+        <input type="text" id="projInp" placeholder="Название проекта">
+        <button class="btn-or" onclick="addProj()">+ Добавить проект</button>
+      </div>
+
+      <div class="slabel">Участники команды</div>
+      <div class="card">
+        <input type="text" id="nName" placeholder="Имя и фамилия">
+        <select id="nRole">
+          <option value="member">Member</option>
+          <option value="vp">VP / Director</option>
+          <option value="president">President</option>
+          <option value="advisor">Faculty Advisor</option>
+        </select>
+        <button class="btn-or" onclick="addMember()">+ Добавить участника</button>
+      </div>
+      <div id="memberList"></div>
+
+      <div class="slabel">Данные</div>
+      <div class="btn-row">
+        <button class="btn btn-lt" onclick="expJ()">📤 Экспорт</button>
+        <button class="btn btn-lt" onclick="document.getElementById('impF').click()">📥 Импорт</button>
+      </div>
+      <input type="file" id="impF" accept=".json" style="display:none" onchange="impJ(event)">
+      <button class="btn btn-del" style="width:100%" onclick="clearAtt()">🗑 Очистить посещаемость</button>
+
+    </div>
+
+  </div><nav class="bnav">
+    <button class="bn on" onclick="gp('journal',this)"><span class="ic">📓</span>Журнал</button>
+    <button class="bn" onclick="gp('meeting',this)"><span class="ic">🗣️</span>Собрания</button>
+    <button class="bn" onclick="gp('member',this)"><span class="ic">👤</span>Участник</button>
+    <button class="bn" onclick="gp('report',this)"><span class="ic">📊</span>Отчёт</button>
+    <button class="bn" onclick="gp('more',this)"><span class="ic">⚙️</span>Ещё</button>
+  </nav>
+</div><div class="overlay" id="ov" onclick="closeSheet()"></div>
+
+<div class="bsheet" id="tSheet">
+  <div class="bs-handle"></div>
+  <div class="bs-title" id="tsTitle">Время</div>
+  <div class="bs-row">
+    <span class="bs-lbl">Начало</span>
+    <input class="bs-inp" type="time" id="tsS" value="17:00">
+  </div>
+  <div class="bs-row">
+    <span class="bs-lbl">Конец</span>
+    <input class="bs-inp" type="time" id="tsE" value="19:00">
+  </div>
+  <div style="margin-bottom:12px">
+    <div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:8px">Проект</div>
+    <div class="pch" id="tsPr"></div>
+  </div>
+  <button class="btn-done" onclick="saveSheet()">Готово</button>
+</div>
+
+<div class="bsheet" id="mSheet">
+  <div class="bs-handle"></div>
+  <div class="bs-title">Новое собрание</div>
+  <div class="bs-row">
+    <span class="bs-lbl">Дата</span>
+    <input class="bs-inp" type="date" id="mDate">
+  </div>
+  <div class="bs-row">
+    <span class="bs-lbl">Начало</span>
+    <input class="bs-inp" type="time" id="mStart" value="17:00">
+  </div>
+  <div class="bs-row">
+    <span class="bs-lbl">Конец</span>
+    <input class="bs-inp" type="time" id="mEnd" value="19:00">
+  </div>
+  <div style="margin-bottom:12px">
+    <div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:8px">Тема (необязательно)</div>
+    <textarea class="mtg-sheet-area" id="mTopic" placeholder="Тема собрания..."></textarea>
+  </div>
+  <div style="margin-bottom:12px">
+    <div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:8px">Проект</div>
+    <div class="pch" id="mPr"></div>
+  </div>
+  <button class="btn-done" onclick="saveMtg()">Сохранить собрание</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════ STATE ═══════════
+let S = {
+  teamName: 'Enactus Team',
+  university: '',
+  defaultHours: 2,
+  workDays: [1,2,3,4,5],
+  projects: [],
+  members: [],
+  att: {},       // wkKey → { mid → { dkey → {status,start,end,project} } }
+  meetings: []   // { id, date, start, end, topic, project, attendees:[] }
+};
+let wOff = 0, shCtx = null;
+
+const CLR=[['#dbeafe','#1e40af'],['#fce7f3','#9d174d'],['#dcfce7','#14532d'],['#fef3c7','#92400e'],['#ede9fe','#4c1d95'],['#ffedd5','#7c2d12'],['#cffafe','#164e63'],['#f3f4f6','#374151']];
+const DN=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+const MN=['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+
+// ═══════════ PERSIST ═══════════
+function sv(){try{localStorage.setItem('en_att',JSON.stringify(S));}catch(e){}}
+function ld(){try{const d=localStorage.getItem('en_att');if(d)Object.assign(S,JSON.parse(d));}catch(e){}if(!S.members)S.members=[];if(!S.att)S.att={};if(!S.meetings)S.meetings=[];if(!S.projects)S.projects=[];}
+
+// ═══════════ NAV ═══════════
+function gp(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.bn').forEach(b=>b.classList.remove('on'));
+  document.getElementById('pg-'+id).classList.add('on');
+  btn.classList.add('on');
+  document.getElementById('cnt').scrollTop=0;
+  if(id==='report')renderReport();
+  if(id==='member'){refSel();renderInd();}
+  if(id==='meeting')renderMtgList();
+  if(id==='more')renderMore();
+}
+
+// ═══════════ WEEK ═══════════
+function wkDates(o=wOff){const n=new Date(),dow=n.getDay()||7,m=new Date(n);m.setDate(n.getDate()-dow+1+o*7);m.setHours(0,0,0,0);return Array.from({length:7},(_,i)=>{const d=new Date(m);d.setDate(m.getDate()+i);return d;});}
+function wkKey(o=wOff){const d=wkDates(o)[0],y=d.getFullYear(),j=new Date(Date.UTC(y,0,1)),w=Math.ceil((((new Date(Date.UTC(y,d.getMonth(),d.getDate()))-j)/864e5)+j.getUTCDay()+1)/7);return `${y}-W${String(w).padStart(2,'0')}`;}
+function dk(d){return d.toISOString().slice(0,10);}
+function fd(d){return d.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit'});}
+function setWkUI(){const ds=wkDates(),m=ds[0],s=ds[6];document.getElementById('wkT').textContent=`Неделя ${wkKey().split('-W')[1]}, ${m.getFullYear()}`;document.getElementById('wkS').textContent=`${m.getDate()} ${MN[m.getMonth()]} — ${s.getDate()} ${MN[s.getMonth()]}`;}
+function cw(d){wOff+=d;setWkUI();renderJournal();}
+function goNow(){wOff=0;setWkUI();renderJournal();}
+
+// ═══════════ HELPERS ═══════════
+function ini(n){return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();}
+function clr(i){return CLR[i%CLR.length];}
+function hrs(s,e){if(!s||!e)return 0;const[sh,sm]=s.split(':').map(Number),[eh,em]=e.split(':').map(Number),h=(eh*60+em-sh*60-sm)/60;return h>0?h:0;}
+function rb(r){const m={president:'<span class="rb rb-pr">President</span>',vp:'<span class="rb rb-vp">VP</span>',member:'<span class="rb rb-mb">Member</span>',advisor:'<span class="rb rb-ad">Advisor</span>'};return m[r]||'';}
+
+// ═══════════ MEMBERS ═══════════
+function addMember(){
+  const n=document.getElementById('nName').value.trim();
+  if(!n){toast('Введите имя ⚠️');return;}
+  S.members.push({id:Date.now()+'',name:n,role:document.getElementById('nRole').value});
+  document.getElementById('nName').value='';
+  sv();renderMembers();renderJournal();refSel();
+  toast('Добавлен: '+n+' ✅');
+}
+function delMember(id){
+  if(!confirm('Удалить участника?'))return;
+  S.members=S.members.filter(m=>m.id!==id);
+  for(const wk in S.att)delete S.att[wk][id];
+  sv();renderMembers();renderJournal();refSel();toast('Удалено 🗑');
+}
+function renderMembers(){
+  const el=document.getElementById('memberList');
+  if(!S.members.length){el.innerHTML='<div class="empty"><div class="ei">👥</div>Добавьте участников</div>';return;}
+  el.innerHTML=S.members.map((m,i)=>{const[bg,fg]=clr(i);return`<div class="prow"><div class="ava" style="background:${bg};color:${fg}">${ini(m.name)}</div><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px">${m.name}</div><div style="margin-top:2px">${rb(m.role)}</div></div><button class="del" onclick="delMember('${m.id}')">✕</button></div>`;}).join('');
+}
+
+// ═══════════ PROJECTS ═══════════
+function addProj(){
+  const n=document.getElementById('projInp').value.trim();
+  if(!n){toast('Введите название проекта');return;}
+  S.projects.push({id:Date.now()+'',name:n});
+  document.getElementById('projInp').value='';
+  sv();renderProjList();toast(n+' ✅');
+}
+function delProj(id){S.projects=S.projects.filter(p=>p.id!==id);sv();renderProjList();}
+function renderProjList(){
+  const el=document.getElementById('projList');
+  el.innerHTML=S.projects.map(p=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f3f4f6"><div style="flex:1;font-size:14px;font-weight:600">📁 ${p.name}</div><button class="del" onclick="delProj('${p.id}')">✕</button></div>`).join('');
+}
+function projChipsHTML(selId=''){
+  if(!S.projects.length)return`<span style="font-size:12px;color:var(--muted)">Нет проектов (добавьте во вкладке «Ещё»)</span>`;
+  return S.projects.map(p=>`<div class="pchip ${p.id===selId?'on':''}" onclick="selProj(this,'${p.id}')">${p.name}</div>`).join('');
+}
+function selProj(el,id){el.closest('.pch').querySelectorAll('.pchip').forEach(c=>c.classList.remove('on'));el.classList.add('on');}
+function getSelProj(containerId){const s=document.querySelector(`#${containerId} .pchip.on`);if(!s)return'';return s.getAttribute('onclick').match(/'([^']+)'/g)[1].replace(/'/g,'');}
+
+// ═══════════ ATTENDANCE ═══════════
+function getRec(mid,dkey){const wk=wkKey();if(!S.att[wk])S.att[wk]={};if(!S.att[wk][mid])S.att[wk][mid]={};if(!S.att[wk][mid][dkey])S.att[wk][mid][dkey]={status:'',start:'17:00',end:'19:00',project:''};return S.att[wk][mid][dkey];}
+function cycle(mid,dkey){const r=getRec(mid,dkey),c=['','present','absent'];r.status=c[(c.indexOf(r.status)+1)%c.length];sv();if(r.status==='present')openSheet(mid,dkey);else renderJournal();}
+
+// ═══════════ SHEET ═══════════
+function openSheet(mid,dkey){
+  const r=getRec(mid,dkey),m=S.members.find(x=>x.id===mid),d=new Date(dkey);
+  shCtx={mid,dkey};
+  document.getElementById('tsTitle').textContent=`${m?.name} · ${DN[d.getDay()-1||6]} ${fd(d)}`;
+  document.getElementById('tsS').value=r.start||'17:00';
+  document.getElementById('tsE').value=r.end||'19:00';
+  document.getElementById('tsPr').innerHTML=projChipsHTML(r.project);
+  document.getElementById('tSheet').classList.add('on');
+  document.getElementById('ov').classList.add('on');
+}
+function openMtgSheet(){
+  document.getElementById('mDate').value=new Date().toISOString().slice(0,10);
+  document.getElementById('mTopic').value='';
+  document.getElementById('mPr').innerHTML=projChipsHTML();
+  document.getElementById('mSheet').classList.add('on');
+  document.getElementById('ov').classList.add('on');
+}
+function closeSheet(){
+  document.querySelectorAll('.bsheet').forEach(b=>b.classList.remove('on'));
+  document.getElementById('ov').classList.remove('on');
+  shCtx=null;
+}
+function saveSheet(){
+  if(!shCtx)return;
+  const r=getRec(shCtx.mid,shCtx.dkey);
+  r.start=document.getElementById('tsS').value;
+  r.end=document.getElementById('tsE').value;
+  r.project=getSelProj('tsPr');
+  sv();closeSheet();renderJournal();
+}
+function saveMtg(){
+  const date=document.getElementById('mDate').value;
+  if(!date){toast('Выберите дату ⚠️');return;}
+  S.meetings.push({id:Date.now()+'',date,start:document.getElementById('mStart').value,end:document.getElementById('mEnd').value,topic:document.getElementById('mTopic').value.trim(),project:getSelProj('mPr'),attendees:[]});
+  sv();closeSheet();renderMtgList();toast('Собрание добавлено ✅');
+}
+
+// ═══════════ JOURNAL ═══════════
+function renderJournal(){
+  const dates=wkDates(),workD=dates.filter((_,i)=>S.workDays.includes(i+1)),today=dk(new Date());
+  let p=0,a=0,h=0;
+  S.members.forEach(mb=>workD.forEach(d=>{const r=getRec(mb.id,dk(d));if(r.status==='present'){p++;h+=hrs(r.start,r.end);}else if(r.status==='absent')a++;}));
+  // Meeting count this week
+  const wkDK=workD.map(d=>dk(d));
+  const wkMtgs=S.meetings.filter(m=>wkDK.includes(m.date));
+
+  document.getElementById('statsG').innerHTML=`
+    <div class="sc"><div class="sc-ic" style="background:var(--green-lt)">✅</div><div><div class="sc-num" style="color:var(--green)">${p}</div><div class="sc-lbl">Присутствуют</div></div></div>
+    <div class="sc"><div class="sc-ic" style="background:var(--red-lt)">❌</div><div><div class="sc-num" style="color:var(--red)">${a}</div><div class="sc-lbl">Отсутствуют</div></div></div>
+    <div class="sc"><div class="sc-ic" style="background:var(--amber-lt)">🗣️</div><div><div class="sc-num" style="color:var(--amber)">${wkMtgs.length}</div><div class="sc-lbl">Собраний</div></div></div>
+    <div class="sc"><div class="sc-ic" style="background:var(--or-lt)">⏱️</div><div><div class="sc-num" style="color:var(--or)">${h.toFixed(1)}</div><div class="sc-lbl">Часов</div></div></div>`;
+
+  // Meeting banners
+  const banner=document.getElementById('mtgBanner');
+  if(wkMtgs.length){
+    banner.innerHTML=wkMtgs.map(m=>{const proj=S.projects.find(p=>p.id===m.project);return`<div class="mtg-card"><div class="mtg-title">🗣️ ${m.topic||'Собрание'}</div><div class="mtg-meta">${m.date} · ${m.start}–${m.end}${proj?' · 📁 '+proj.name:''} · Присутствовали: ${m.attendees.length} чел.</div></div>`;}).join('');
+  } else banner.innerHTML='';
+
+  if(!S.members.length){document.getElementById('journalList').innerHTML=`<div class="empty"><div class="ei">👥</div>Добавьте участников во вкладке «Ещё»</div>`;return;}
+
+  document.getElementById('journalList').innerHTML=S.members.map((m,mi)=>{
+    const[bg,fg]=clr(mi);let tH=0;
+    const chips=workD.map(d=>{
+      const dkey=dk(d),r=getRec(m.id,dkey),st=r.status,isT=dkey===today;
+      const lbl={present:'П',absent:'О','':`<span style="font-size:10px;color:#ccc">·</span>`}[st];
+      if(st==='present')tH+=hrs(r.start,r.end);
+      return`<div class="dc" onclick="cycle('${m.id}','${dkey}')"><span class="dname">${DN[d.getDay()-1||6]}</span><div class="chip ${st}${isT?' today-r':''}">${lbl}</div><span class="ddate">${fd(d)}</span></div>`;
+    }).join('');
+    return`<div class="mcard"><div class="mcard-top"><div class="ava" style="background:${bg};color:${fg}">${ini(m.name)}</div><div style="flex:1;min-width:0"><div class="mname">${m.name}</div><div class="mrole">${rb(m.role)}</div></div><span class="mhrs">${tH.toFixed(1)} ч</span></div><div class="chips-row">${chips}</div></div>`;
+  }).join('');
+}
+
+// ═══════════ MEETINGS ═══════════
+function renderMtgList(){
+  const el=document.getElementById('mtgList');
+  if(!S.meetings.length){el.innerHTML=`<div class="empty"><div class="ei">🗓️</div>Собраний ещё нет</div>`;return;}
+  el.innerHTML=S.meetings.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(m=>{
+    const proj=S.projects.find(p=>p.id===m.project);
+    return`<div class="mtg-card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div>
+          <div class="mtg-title">${m.topic||'Собрание'}</div>
+          <div class="mtg-meta">${m.date} · ${m.start}–${m.end}${proj?' · 📁 '+proj.name:''}</div>
+        </div>
+        <button style="background:var(--red-lt);color:var(--red);border:none;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0" onclick="delMtg('${m.id}')">Удалить</button>
+      </div>
+      <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px">Отметить присутствие (${m.attendees.length}/${S.members.length}):</div>
+      <div class="att-grid">
+        ${S.members.length?S.members.map((mb,mi)=>{const[bg,fg]=clr(mi),on=m.attendees.includes(mb.id);return`<div class="att-chip ${on?'on':''}" onclick="togAtt('${m.id}','${mb.id}')"><div class="att-chip-ava" style="background:${bg};color:${fg}">${ini(mb.name)}</div><span class="att-chip-name">${mb.name.split(' ')[0]}</span>${on?'<span class="att-check">✓</span>':''}</div>`;}).join(''):'<span style="font-size:12px;color:var(--muted)">Добавьте участников</span>'}
+      </div>
+    </div>`;
+  }).join('');
+}
+function delMtg(id){S.meetings=S.meetings.filter(m=>m.id!==id);sv();renderMtgList();}
+function togAtt(mtgId,mbId){
+  const m=S.meetings.find(x=>x.id===mtgId);if(!m)return;
+  if(m.attendees.includes(mbId))m.attendees=m.attendees.filter(x=>x!==mbId);else m.attendees.push(mbId);
+  sv();renderMtgList();
+}
+
+// ═══════════ INDIVIDUAL ═══════════
+function refSel(){const s=document.getElementById('indSel'),v=s.value;s.innerHTML='<option value="">— выберите участника —</option>'+S.members.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');if(v)s.value=v;}
+function renderInd(){
+  const id=document.getElementById('indSel').value,el=document.getElementById('indContent');
+  if(!id){el.innerHTML='';return;}
+  const m=S.members.find(x=>x.id===id);if(!m)return;
+  const mi=S.members.indexOf(m),[bg,fg]=clr(mi);
+  let p=0,a=0,h=0,days=0;const rows=[];
+  Object.keys(S.att).sort().forEach(wk=>{
+    const wd=(S.att[wk]||{})[id]||{};let wp=0,wa=0,wh=0,prSet=new Set();
+    Object.values(wd).forEach(r=>{if(r.status==='present'){wp++;wh+=hrs(r.start,r.end);p++;h+=hrs(r.start,r.end);days++;if(r.project)prSet.add(r.project);}else if(r.status==='absent'){wa++;a++;days++;}});
+    if(wp+wa)rows.push({wk,wp,wa,wh,prjs:[...prSet]});
+  });
+  const mtgCnt=S.meetings.filter(m=>m.attendees.includes(id)).length;
+  const rate=days?Math.round(p/days*100):0;
+  el.innerHTML=`
+    <div class="ind-hdr">
+      <div class="ind-ava" style="background:${bg};color:${fg}">${ini(m.name)}</div>
+      <div style="flex:1"><div style="font-size:16px;font-weight:800">${m.name}</div><div style="margin-top:4px">${rb(m.role)}</div></div>
+      <div style="text-align:right"><div class="pct-n">${rate}%</div><div style="font-size:11px;color:var(--muted)">посещаемость</div><div class="pct-bar"><div class="pct-fill" style="width:${rate}%"></div></div></div>
+    </div>
+    <div class="sg" style="margin-bottom:10px">
+      <div class="sc"><div class="sc-ic" style="background:var(--green-lt)">✅</div><div><div class="sc-num" style="color:var(--green)">${p}</div><div class="sc-lbl">Присутствий</div></div></div>
+      <div class="sc"><div class="sc-ic" style="background:var(--red-lt)">❌</div><div><div class="sc-num" style="color:var(--red)">${a}</div><div class="sc-lbl">Отсутствий</div></div></div>
+      <div class="sc"><div class="sc-ic" style="background:var(--amber-lt)">🗣️</div><div><div class="sc-num" style="color:var(--amber)">${mtgCnt}</div><div class="sc-lbl">Собраний</div></div></div>
+      <div class="sc"><div class="sc-ic" style="background:var(--or-lt)">⏱️</div><div><div class="sc-num" style="color:var(--or)">${h.toFixed(1)}</div><div class="sc-lbl">Часов</div></div></div>
+    </div>
+    ${rows.length?rows.map(r=>{const pn=r.prjs.map(pid=>{const pr=S.projects.find(x=>x.id===pid);return pr?'📁 '+pr.name:'';}).filter(Boolean).join(', ');return`<div class="wk-item"><div class="wk-lbl">${r.wk}</div><span class="badge bg">П ${r.wp}</span><span class="badge br">О ${r.wa}</span><span class="badge bo">${r.wh.toFixed(1)} ч</span>${pn?`<div style="width:100%;font-size:11px;color:var(--muted);margin-top:2px">${pn}</div>`:''}</div>`;}).join(''):`<div class="empty"><div class="ei">📭</div>Нет данных</div>`}`;
+}
+
+// ═══════════ REPORT ═══════════
+function renderReport(){
+  const el=document.getElementById('repContent'),wks=Object.keys(S.att).sort();
+  if(!wks.length||!S.members.length){el.innerHTML='<div class="empty"><div class="ei">📭</div>Нет данных</div>';return;}
+  el.innerHTML=wks.map(wk=>{
+    const wkD=S.att[wk]||{},allDK=[...new Set(Object.values(wkD).flatMap(d=>Object.keys(d)))].sort();
+    const wkMtgs=S.meetings.filter(m=>allDK.includes(m.date));
+    const rows=S.members.map((m,mi)=>{
+      const days=wkD[m.id]||{};let p=0,a=0,h=0;
+      allDK.forEach(dkey=>{const r=days[dkey]||{status:''};if(r.status==='present'){p++;h+=hrs(r.start||'17:00',r.end||'19:00');}else if(r.status==='absent')a++;});
+      if(!p&&!a)return'';
+      const[bg,fg]=clr(mi);
+      return`<div class="rp-row"><div class="ava" style="background:${bg};color:${fg};width:26px;height:26px;font-size:10px;border-radius:7px;flex-shrink:0">${ini(m.name)}</div><div class="rp-name">${m.name}</div>${rb(m.role)}<span class="badge bg">П ${p}</span><span class="badge br">О ${a}</span><span class="badge bo">${h.toFixed(1)}ч</span></div>`;
+    }).join('');
+    if(!rows.trim())return'';
+    return`<div class="rp-wk"><div class="rp-wk-t">📅 ${wk}</div>${wkMtgs.map(m=>`<div class="rp-mtg">🗣️ ${m.topic||'Собрание'} · ${m.date} · Присутствовали: ${m.attendees.length} чел.</div>`).join('')}${rows}</div>`;
+  }).filter(Boolean).join('')||'<div class="empty"><div class="ei">📭</div>Нет данных</div>';
+}
+
+// ═══════════ WORD ═══════════
+async function dlWord(){
+  if(typeof docx==='undefined'){toast('Библиотека не загружена ⚠️');return;}
+  const{Document,Packer,Paragraph,TextRun,Table,TableRow,TableCell,AlignmentType,WidthType,BorderStyle,ShadingType,HeadingLevel,PageBreak}=docx;
+  const brd={style:BorderStyle.SINGLE,size:1,color:'DDDDDD'},borders={top:brd,bottom:brd,left:brd,right:brd};
+  const cell=(txt,o={})=>new TableCell({borders,width:{size:o.w||1500,type:WidthType.DXA},margins:{top:80,bottom:80,left:120,right:120},shading:o.fill?{fill:o.fill,type:ShadingType.CLEAR}:undefined,children:[new Paragraph({alignment:o.c?AlignmentType.CENTER:AlignmentType.LEFT,children:[new TextRun({text:String(txt),bold:!!o.b,size:o.sz||20,font:'Arial',color:'000000'})]})]});
+
+  const ch=[
+    new Paragraph({heading:HeadingLevel.HEADING_1,children:[new TextRun({text:`Отчёт посещаемости — Enactus ${S.teamName}`,font:'Arial',bold:true,size:36})]}),
+    new Paragraph({children:[new TextRun({text:`${S.university?S.university+' · ':''}Дата: ${new Date().toLocaleDateString('ru-RU')}`,font:'Arial',size:20,color:'888888'})]}),
+    new Paragraph({children:[]})
+  ];
+
+  for(const wk of Object.keys(S.att).sort()){
+    const wkD=S.att[wk]||{};
+    const allDK=[...new Set(Object.values(wkD).flatMap(d=>Object.keys(d)).filter(dkey=>{const d=new Date(dkey);return S.workDays.includes(d.getDay()||7);}))].sort();
+    if(!allDK.length)continue;
+    ch.push(new Paragraph({heading:HeadingLevel.HEADING_2,children:[new TextRun({text:`Неделя: ${wk}`,font:'Arial',bold:true,size:28})]}));
+    const wkMtgs=S.meetings.filter(m=>allDK.includes(m.date));
+    wkMtgs.forEach(m=>{const proj=S.projects.find(p=>p.id===m.project);const names=m.attendees.map(id=>{const mb=S.members.find(x=>x.id===id);return mb?mb.name:'';}).filter(Boolean).join(', ');ch.push(new Paragraph({children:[new TextRun({text:`🗣️ ${m.topic||'Собрание'} · ${m.date} · ${m.start}–${m.end}${proj?' · '+proj.name:''} · Присутствовали: ${names||'—'}`,font:'Arial',size:20,color:'FF6B00'})]}));});
+    const cw=Math.floor((9360-3000)/Math.max(allDK.length,1));
+    const hRow=new TableRow({children:[cell('Участник (роль)',{w:3000,b:true,fill:'FFF4EC'}),...allDK.map(dkey=>{const d=new Date(dkey);return cell(`${DN[d.getDay()-1||6]} ${fd(d)}`,{w:cw,b:true,fill:'FFF4EC',c:true});}),cell('Часов',{w:900,b:true,fill:'FFF4EC',c:true})]});
+    const dRows=S.members.map(m=>{const days=wkD[m.id]||{};let h=0;const cells=allDK.map(dkey=>{const r=days[dkey]||{status:''};let t='—',fill='FFFFFF';if(r.status==='present'){t='П';fill='F0FDF4';h+=hrs(r.start||'17:00',r.end||'19:00');}else if(r.status==='absent'){t='О';fill='FFF5F5';}return cell(t,{w:cw,c:true,fill});});return new TableRow({children:[cell(`${m.name} (${m.role})`,{w:3000}),...cells,cell(h.toFixed(1)+'ч',{w:900,c:true,b:true})]});});
+    ch.push(new Table({width:{size:9360,type:WidthType.DXA},columnWidths:[3000,...allDK.map(()=>cw),900],rows:[hRow,...dRows]}),new Paragraph({children:[]}),new Paragraph({children:[new PageBreak()]}));
+  }
+
+  // Собрания
+  if(S.meetings.length){
+    ch.push(new Paragraph({heading:HeadingLevel.HEADING_2,children:[new TextRun({text:'Собрания команды',font:'Arial',bold:true,size:28})]}));
+    S.meetings.sort((a,b)=>a.date.localeCompare(b.date)).forEach(m=>{
+      const proj=S.projects.find(p=>p.id===m.project);
+      const names=m.attendees.map(id=>{const mb=S.members.find(x=>x.id===id);return mb?mb.name:'';}).filter(Boolean).join(', ');
+      ch.push(new Paragraph({children:[new TextRun({text:`${m.date} · ${m.start}–${m.end}${proj?' · 📁 '+proj.name:''}`,font:'Arial',bold:true,size:22})]}));
+      if(m.topic)ch.push(new Paragraph({children:[new TextRun({text:`Тема: ${m.topic}`,font:'Arial',size:20})]}));
+      ch.push(new Paragraph({children:[new TextRun({text:`Присутствовали (${m.attendees.length}): ${names||'—'}`,font:'Arial',size:20})]}));
+      ch.push(new Paragraph({children:[]}));
+    });
+    ch.push(new Paragraph({children:[new PageBreak()]}));
+  }
+
+  // Итого
+  ch.push(new Paragraph({heading:HeadingLevel.HEADING_2,children:[new TextRun({text:'Итоговая сводка',font:'Arial',bold:true,size:28})]}));
+  const gR=S.members.map(m=>{
+    let p=0,a=0,h=0,days=0;
+    Object.values(S.att).forEach(wkD=>{Object.values((wkD[m.id])||{}).forEach(r=>{if(r.status==='present'){p++;h+=hrs(r.start||'17:00',r.end||'19:00');days++;}else if(r.status==='absent'){a++;days++;}});});
+    const mtgC=S.meetings.filter(x=>x.attendees.includes(m.id)).length;
+    const rate=days?Math.round(p/days*100):0;
+    return new TableRow({children:[cell(`${m.name} (${m.role})`,{w:2800}),cell(String(p),{w:900,c:true,fill:'F0FDF4'}),cell(String(a),{w:900,c:true,fill:'FFF5F5'}),cell(String(mtgC),{w:900,c:true,fill:'FFF4EC'}),cell(h.toFixed(1)+'ч',{w:1000,c:true}),cell(rate+'%',{w:860,c:true,b:true})]});
+  });
+  ch.push(new Table({width:{size:9360,type:WidthType.DXA},columnWidths:[2800,900,900,900,1000,860],rows:[new TableRow({children:[cell('Участник',{w:2800,b:true,fill:'FFF4EC'}),cell('Присут.',{w:900,b:true,fill:'FFF4EC',c:true}),cell('Отсутст.',{w:900,b:true,fill:'FFF4EC',c:true}),cell('Собраний',{w:900,b:true,fill:'FFF4EC',c:true}),cell('Часов',{w:1000,b:true,fill:'FFF4EC',c:true}),cell('% посещ.',{w:860,b:true,fill:'FFF4EC',c:true})]}), ...gR]}));
+
+  const doc=new Document({styles:{default:{document:{run:{font:'Arial',size:22}}},paragraphStyles:[{id:'Heading1',name:'Heading 1',basedOn:'Normal',next:'Normal',quickFormat:true,run:{size:36,bold:true,font:'Arial'},paragraph:{spacing:{before:240,after:240},outlineLevel:0}},{id:'Heading2',name:'Heading 2',basedOn:'Normal',next:'Normal',quickFormat:true,run:{size:28,bold:true,font:'Arial'},paragraph:{spacing:{before:200,after:160},outlineLevel:1}}]},sections:[{properties:{page:{size:{width:12240,height:15840},margin:{top:1080,right:1080,bottom:1080,left:1080}}},children:ch}]});
+  const blob=await Packer.toBlob(doc),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=`Enactus_${S.teamName}_Посещаемость_${new Date().toLocaleDateString('ru-RU').replace(/\./g,'-')}.docx`;a.click();URL.revokeObjectURL(url);
+  toast('Файл скачан ✅');
+}
+
+// ═══════════ SETTINGS ═══════════
+function renderMore(){
+  document.getElementById('sTeam').value=S.teamName;
+  document.getElementById('sUni').value=S.university||'';
+  document.getElementById('sHrs').value=S.defaultHours;
+  renderWdC();renderProjList();renderMembers();
+}
+function renderWdC(){
+  const el=document.getElementById('wdC');if(!el)return;
+  el.innerHTML=DN.map((_,i)=>{const d=i+1,on=S.workDays.includes(d);return`<div class="wdc ${on?'on':''}" onclick="togWd(${d},this)">${DN[i]}</div>`;}).join('');
+}
+function togWd(d,el){if(S.workDays.includes(d))S.workDays=S.workDays.filter(x=>x!==d);else S.workDays.push(d);S.workDays.sort();el.classList.toggle('on',S.workDays.includes(d));}
+function saveSet(){
+  S.teamName=document.getElementById('sTeam').value.trim()||'Enactus Team';
+  S.university=document.getElementById('sUni').value.trim();
+  S.defaultHours=parseInt(document.getElementById('sHrs').value)||2;
+  document.getElementById('hTeam').textContent=S.teamName;
+  document.getElementById('hUni').textContent=S.university||'Учёт посещаемости';
+  sv();renderJournal();toast('Сохранено ✅');
+}
+function clearAtt(){if(!confirm('Очистить все отметки посещаемости?'))return;S.att={};sv();renderJournal();toast('Очищено 🗑');}
+function expJ(){const b=new Blob([JSON.stringify(S,null,2)],{type:'application/json'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=`enactus_backup_${Date.now()}.json`;a.click();URL.revokeObjectURL(u);toast('Экспортировано 📤');}
+function impJ(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{Object.assign(S,JSON.parse(ev.target.result));sv();init();toast('Импортировано 📥');}catch{toast('Ошибка файла ❌');}};r.readAsText(f);e.target.value='';}
+
+// ═══════════ TOAST ═══════════
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('on');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('on'),2400);}
+
+// ═══════════ INIT ═══════════
+function init(){
+  ld();
+  document.getElementById('hTeam').textContent=S.teamName;
+  document.getElementById('hUni').textContent=S.university||'Учёт посещаемости';
+  setWkUI();renderJournal();refSel();renderWdC();
+}
+
+init();
+
+// Demo data - ИСПРАВЛЕННЫЙ БЛОК
+if (!localStorage.getItem('en_att_initialized')) {
+  S.teamName = 'Enactus ИГУ';
+  S.university = 'ИГУ им. Касыма Тыныстанова';
+  S.projects = [{id:'p1',name:'EcoStart'},{id:'p2',name:'FoodShare KG'}];
+  S.members = [
+    {id:'m1',name:'Айгерим Бекова',role:'president'},
+    {id:'m2',name:'Нурлан Осмонов',role:'vp'},
+    {id:'m3',name:'Гульмира Токоева',role:'member'},
+    {id:'m4',name:'Адиль Сатыбалдиев',role:'member'},
+    {id:'m5',name:'Айпери Мамытова',role:'member'},
+  ];
+  document.getElementById('hTeam').textContent=S.teamName;
+  document.getElementById('hUni').textContent=S.university;
+  
+  // Ставим флажок, что приложение инициализировано
+  localStorage.setItem('en_att_initialized', 'true'); 
+  
+  sv(); renderJournal(); refSel();
+}
+</script>
+</body>
+</html>
